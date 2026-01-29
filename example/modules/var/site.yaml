@@ -1,0 +1,8 @@
+name: "私のサイト"
+url: "https://example.com"
+author:
+  name: "山田 太郎"
+  email: "hello@example.com"
+description: "シンプルで美しいウェブサイト"
+language: "ja"
+show_banner: true

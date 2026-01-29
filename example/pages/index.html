@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{@site.language}}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{@site.name}} - ホーム</title>
+    <meta name="description" content="{{@site.description}}">
+</head>
+
+<body>
+    <module src="header" />
+
+    <main>
+        <h1>Welcome to My Site</h1>
+        <!-- @if @site.show_banner -->
+        <div class="banner">
+            <p><strong>お知らせ:</strong> セール開催中！</p>
+        </div>
+        <!-- @endif -->
+        <module src="components/card" title="新着情報" description="サイトがオープンしました！" />
+        <module src="outer" val="Nested Value" />
+    </main>
+
+    <module src="footer" />
+</body>
+
+</html>

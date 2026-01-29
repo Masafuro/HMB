@@ -1,0 +1,31 @@
+{
+  "name": "hmb",
+  "version": "1.0.0",
+  "description": "**HMB (Html Module Builder)** は、HTML部品の再利用と静的サイト生成に特化した、最小限のビルドツールです。複雑な設定や学習コストを極限まで削減し、HTML/CSSの知識だけで使いこなせることを目指します。",
+  "main": "index.js",
+  "bin": {
+    "hmb": "./bin/hmb.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Masafuro/HMB.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Masafuro/HMB/issues"
+  },
+  "homepage": "https://github.com/Masafuro/HMB#readme",
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "commander": "^14.0.2",
+    "fs-extra": "^11.3.3",
+    "glob": "^13.0.0",
+    "js-yaml": "^4.1.1"
+  }
+}
