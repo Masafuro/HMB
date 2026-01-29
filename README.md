@@ -1,4 +1,4 @@
-# HMB (Html Module Builder) 企画書 v1.1
+# HMB (Html Module Builder) 企画書 v1.3
 
 ## 🎯 プロジェクト概要
 
@@ -26,9 +26,13 @@
 │   │   ├── build.yaml     # {{@build.*}} に対応
 │   │   ├── meta.yaml      # {{@meta.*}} に対応
 │   │   └── social.yaml    # {{@social.*}} に対応
-│   ├── header.html # 共通ヘッダー
-│   ├── footer.html # 共通フッター
-│   └── components/ # その他コンポーネント
+│   ├── header.html        # ルートモジュール
+│   ├── footer.html        # ルートモジュール
+│   └── components/        # コンポーネント名前空間
+│       ├── card.html
+│       ├── button.html
+│       └── layout/        # サブ名前空間
+│           └── sidebar.html
 └── dist/           # ビルド出力（自動生成）
     ├── index.html
     ├── about.html
@@ -42,33 +46,42 @@
 - `pages/` ディレクトリ以下の全ファイル・全ディレクトリを、同じ構造で `dist/` にコピーする
 - `.html` ファイルは特別な処理を適用し、その他のファイル（`.css`, `.js`, 画像など）はそのままコピー
 
-### 2. **モジュールのインクルード**
+### 2. **モジュールのインクルード（名前空間ベースのみ）**
 ```html
-<!-- ページファイル内 -->
+<!-- ルートモジュール参照（modules直下） -->
 <module src="header" />
-<module src="components/card" />
+<module src="footer" />
 
-<!-- モジュール引数の指定 -->
-<module src="card" 
+<!-- 名前空間付きモジュール参照（modules/内のパス） -->
+<module src="components/card" />
+<module src="components/layout/sidebar" />
+
+<!-- 引数付きモジュール -->
+<module src="components/card" 
         title="カードタイトル"
         description="説明文です"
         class="featured" />
 ```
 
+**規則**:
+- パス区切りには `/` を使用
+- 拡張子 `.html` は省略可能
+- 参照パスは常に `modules/` ディレクトリをルートとして解釈
+- **相対パス (`./`, `../`) は使用不可**
+
 ### 3. **グローバル変数の置換**
 ```html
 <!-- YAMLファイルの内容を参照 -->
-<title>{{@site.name}} - {{@site.title}}</title>
+<title>{{@site.name}} - ホーム</title>
 <footer>&copy; {{@build.year}} {{@site.name}}</footer>
 
 <!-- ネストされた変数の参照 -->
-<meta property="og:url" content="{{@site.url}}">
 <meta name="author" content="{{@site.author.name}}">
 ```
 
 ### 4. **モジュール引数の置換**
 ```html
-<!-- モジュールファイル内 -->
+<!-- モジュールファイル内（例: modules/components/card.html） -->
 <div class="card {{class}}">
   <h2>{{title}}</h2>
   <p>{{description}}</p>
@@ -86,94 +99,117 @@
 | `{{argument}}` | モジュール引数 | `{{title}}` | - |
 
 ### モジュールインクルード
-```html
-<!-- 基本形 -->
-<module src="component-name" />
-
-<!-- 引数付き -->
-<module src="card" title="タイトル" class="special" />
-
-<!-- 相対パス -->
-<module src="./local-component" />
-<module src="../parent-component" />
-```
+| 記法 | 説明 | 解決先（例） |
+|------|------|--------------|
+| `<module src="name" />` | ルートモジュール | `modules/name.html` |
+| `<module src="ns/name" />` | 名前空間付きモジュール | `modules/ns/name.html` |
+| `<module src="ns/sub/name" />` | 深い名前空間 | `modules/ns/sub/name.html` |
+| `<module src="name.html" />` | 拡張子付き（省略可） | `modules/name.html` |
 
 ## 🗂️ グローバル変数定義
 
-### 変数ファイルの配置と対応関係
-```
-modules/var/
-├── site.yaml      # {{@site.*}} に対応
-├── build.yaml     # {{@build.*}} に対応
-├── meta.yaml      # {{@meta.*}} に対応
-└── social.yaml    # {{@social.*}} に対応
-```
+変数ファイルは `modules/var/` ディレクトリに配置し、ファイル名が名前空間になります。
 
-### 変数ファイルの例
 ```yaml
-# modules/var/site.yaml → {{@site.*}} で参照可能
+# modules/var/site.yaml → {{@site.*}} で参照
 name: "私のサイト"
 url: "https://example.com"
 author:
   name: "山田 太郎"
   email: "hello@example.com"
 description: "シンプルで美しいウェブサイト"
-language: "ja"
 ```
 
-```yaml
-# modules/var/build.yaml → {{@build.*}} で参照可能
-year: 2024
-timestamp: "2024-01-20T12:00:00Z"
-version: "1.0.0"
-environment: "production"
-```
+## 🔄 モジュール検索の仕組み
 
-```yaml
-# modules/var/meta.yaml → {{@meta.*}} で参照可能
-keywords: "web, site, simple"
-og_type: "website"
-twitter_card: "summary"
-```
+### 検索ルール
+1. パスが `/` で始まらない → `modules/` からの相対パスとして扱う
+2. 拡張子 `.html` がない場合 → 自動的に追加して検索
+3. ファイルが見つからない場合 → エラーを出力
 
-### 変数参照の仕組み
-1. `{{@site.name}}` → `modules/var/site.yaml` の `name` プロパティ
-2. `{{@build.year}}` → `modules/var/build.yaml` の `year` プロパティ
-3. `{{@site.author.name}}` → `modules/var/site.yaml` の `author.name` プロパティ（ネスト対応）
+### 例
+```html
+<!-- 常に modules/ からのパスとして解決 -->
+<module src="header" />                 <!-- → modules/header.html -->
+<module src="components/card" />        <!-- → modules/components/card.html -->
+<module src="components/layout/sidebar" /><!-- → modules/components/layout/sidebar.html -->
+<module src="header.html" />            <!-- → modules/header.html -->
+```
 
 ## ⚙️ ビルドプロセス
 
 ### ステップ1: グローバル変数の読み込み
 ```javascript
 // modules/var/ 内の全YAMLファイルを読み込み
-// ファイル名が名前空間になる
 variables = {
   site: {       // ← site.yamlの内容
     name: "私のサイト",
     url: "https://example.com",
-    author: { name: "山田 太郎", email: "..." },
-    ...
+    // ...
   },
   build: {      // ← build.yamlの内容
     year: 2024,
-    timestamp: "...",
-    version: "1.0.0"
+    // ...
   },
-  meta: { ... },  // ← meta.yamlの内容
-  social: { ... } // ← social.yamlの内容
+  // ... 他のYAMLファイル
 }
 ```
 
 ### ステップ2: ページの処理
 1. `pages/` 内の各HTMLファイルに対して：
    - `{{@名前空間.プロパティ}}` を対応するYAMLの値で置換
-   - `<module src="...">` を解決（再帰的に処理）
+   - `<module src="名前空間/パス">` を解決（`modules/` からの絶対パス）
    - モジュール内の `{{引数名}}` を渡された引数で置換
 2. その他のファイル（CSS、JS、画像など）はそのままコピー
 
 ### ステップ3: 出力
 - 処理済みのファイルを `dist/` に出力
 - 元のディレクトリ構造を維持
+
+## 🎨 使用例
+
+### ページファイル
+```html
+<!-- pages/index.html -->
+<!DOCTYPE html>
+<html lang="{{@site.language}}">
+<head>
+  <meta charset="UTF-8">
+  <title>{{@site.name}} - ホーム</title>
+  <meta name="description" content="{{@site.description}}">
+</head>
+<body>
+  <module src="header" />
+  
+  <main>
+    <h1>{{@site.name}}へようこそ</h1>
+    <module src="components/card"
+            title="新着情報"
+            description="サイトがオープンしました！" />
+  </main>
+  
+  <module src="footer" />
+</body>
+</html>
+```
+
+### モジュールファイル
+```html
+<!-- modules/header.html -->
+<header>
+  <h1>{{@site.name}}</h1>
+  <nav>
+    <a href="/">ホーム</a>
+    <a href="/about.html">About</a>
+  </nav>
+</header>
+
+<!-- modules/components/card.html -->
+<div class="card">
+  <h2>{{title}}</h2>
+  <p>{{description}}</p>
+</div>
+```
 
 ## 🚀 CLIコマンド
 
@@ -186,9 +222,6 @@ hmb dev
 
 # プロジェクト初期化
 hmb init [プロジェクト名]
-
-# 変数確認
-hmb vars
 
 # ヘルプ
 hmb --help
@@ -217,100 +250,24 @@ module.exports = {
 };
 ```
 
-## 🎨 使用例
-
-### ページファイル
-```html
-<!-- pages/index.html -->
-<!DOCTYPE html>
-<html lang="{{@site.language}}">
-<head>
-  <meta charset="UTF-8">
-  <!-- site.yamlのnameとtitleを参照 -->
-  <title>{{@site.name}} - ホーム</title>
-  <!-- site.yamlのdescriptionを参照 -->
-  <meta name="description" content="{{@site.description}}">
-  <!-- meta.yamlのkeywordsを参照 -->
-  <meta name="keywords" content="{{@meta.keywords}}">
-</head>
-<body>
-  <!-- モジュールにsite.yamlの値を渡す -->
-  <module src="header" site-name="{{@site.name}}" />
-  
-  <main>
-    <h1>{{@site.name}}へようこそ</h1>
-    
-    <!-- build.yamlの情報を表示 -->
-    <div class="info">
-      <p>バージョン: {{@build.version}}</p>
-      <p>ビルド年: {{@build.year}}</p>
-    </div>
-  </main>
-  
-  <!-- 複数のグローバル変数を組み合わせて使用 -->
-  <module src="footer" 
-          copyright-year="{{@build.year}}" 
-          author="{{@site.author.name}}" />
-</body>
-</html>
-```
-
-### モジュールファイル
-```html
-<!-- modules/header.html -->
-<header>
-  <!-- ページから渡された引数を使用 -->
-  <h1>{{site-name}}</h1>
-  <nav>
-    <a href="/">ホーム</a>
-    <a href="/about.html">About</a>
-  </nav>
-</header>
-```
-
-## 🔍 変数解決の具体例
-
-```yaml
-# modules/var/site.yaml
-name: "My Website"
-author:
-  name: "Taro Yamada"
-  role: "Developer"
-```
-
-```html
-<!-- ページ内での参照 -->
-{{@site.name}}           → "My Website"
-{{@site.author.name}}    → "Taro Yamada"
-{{@site.author.role}}    → "Developer"
-{{@site.nonexistent}}    → "" (空文字、警告を表示)
-```
-
 ## 📋 段階的実装計画
 
 ### Phase 1: 基本機能 (v0.1.0)
 1. ファイルコピー（`pages/` → `dist/`）
-2. モジュールインクルード（`<module src="...">`）
-3. グローバル変数置換（`{{@名前空間.プロパティ}}`）
-4. モジュール引数置換（`{{引数名}}`）
+2. 名前空間付きモジュールインクルード（`<module src="namespace/path">`）
+3. グローバル変数置換（`{{@namespace.property}}`）
+4. モジュール引数置換（`{{arg}}`）
 5. 基本的なCLI（`hmb build`）
 
 ### Phase 2: 開発体験 (v0.2.0)
 1. 開発サーバー（`hmb dev`）
 2. ファイル監視と自動リビルド
-3. エラーメッセージの改善（未定義変数の警告など）
+3. エラーメッセージの改善（未定義変数、存在しないモジュールなど）
 
 ### Phase 3: 拡張機能 (v0.3.0)
-1. 条件付きレンダリング（`<!-- @if {{@build.environment}} == "production" -->`）
+1. 条件付きレンダリング（`<!-- @if ... -->`）
 2. 動的変数（日付、ファイル情報など）
 3. アセット最適化（オプション）
-
-## 🧪 技術スタック
-
-- **ランタイム**: Node.js (v14以上)
-- **コア依存**: 最小限（fs, path など標準モジュール中心）
-- **追加依存**: `js-yaml`（YAMLパース用）、`commander`（CLI用）
-- **配布**: npmパッケージとして公開
 
 ## 🎯 目標ユーザー
 
@@ -323,11 +280,11 @@ author:
 
 - ✅ **学習コストほぼゼロ**: HTML知識だけで使える
 - ✅ **透過性**: ビルドプロセスが完全に把握できる
-- ✅ **段階的導入**: 既存プロジェクトに一部から導入可能
+- ✅ **一貫性**: モジュール参照は常に名前空間ベースのみ
+- ✅ **整理された変数管理**: 名前空間ごとにYAMLファイルで管理
 - ✅ **依存最小限**: Node.js標準モジュール中心
 - ✅ **出力品質**: 完全な静的HTML、SEO最適
-- ✅ **整理された変数管理**: 名前空間ごとにYAMLファイルで管理
 
 ---
 
-この仕様により、グローバル変数は `modules/var/` ディレクトリ内のYAMLファイルに整理され、`{{@ファイル名.プロパティ}}` という直感的な記法で参照できます。まずはPhase 1の実装から始めましょう！
+この仕様により、モジュール参照は `modules/` をルートとした明確な名前空間パスのみとなり、一貫性とシンプルさが大幅に向上します。まずはPhase 1の実装から始めましょう！
