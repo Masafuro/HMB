@@ -17,7 +17,8 @@ HTML/CSS制作者のための、最小限の静的サイトジェネレーター
 
 ```bash
 # 新しいプロジェクトの作成
-npx hmb init my-project
+# 新しいプロジェクトの作成
+npx html-module-builder init my-project
 
 # ディレクトリへ移動
 cd my-project

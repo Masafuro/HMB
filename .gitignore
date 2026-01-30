@@ -1,0 +1,10 @@
+node_modules/
+dist/
+example/dist/
+test-init/
+*.tgz
+*.log
+.DS_Store
+.vscode/
+.env
+.env.local
